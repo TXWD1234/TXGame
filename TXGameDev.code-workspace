@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"name": "SampleProject",
+			"path": "SampleProject"
+		},
+		{
+			"name": "TXGame",
+			"path": "."
+		}
+	],
+	"settings": {
+		"cmake.sourceDirectory": "${workspaceFolder:SampleProject}"
+  }
+}

@@ -1,0 +1,21 @@
+{
+	"OreGeneration": {
+		"PolicyCommon": {
+			"clusterAmount": 4,
+			"radius": 6.0,
+			"surroundingClusterOffsetMin": 3,
+			"surroundingClusterOffsetMax": 5,
+			"surroundingClusterAmount": 6,
+			"surroundingClusterRadius": 3.5
+		}
+	},
+	"Art": {
+		"coal":        [ "coal/coal1.bmp" ],
+		"copper":      [ "copper/copper1.bmp" ],
+		"gold":        [ "gold/gold1.bmp" ],
+		"iron":        [ "iron/iron1.bmp", "iron/iron2.bmp" ],
+		"grass":       [ "ground/grass01.bmp", "ground/grass02.bmp", "ground/grass03.bmp", "ground/grass04.bmp", "ground/grass05.bmp", "ground/grass06.bmp", "ground/grass07.bmp", "ground/grass08.bmp", "ground/grass09.bmp" ],
+		"rock":        [ "ground/rock01.bmp", "ground/rock02.bmp", "ground/rock03.bmp" ],
+		"groundEdge":  [ "ground/grass_right.bmp", "ground/grass_left.bmp", "ground/grass_top.bmp", "ground/grass_bottom.bmp", "ground/grass_topLeft.bmp", "ground/grass_topRight.bmp", "ground/grass_bottomLeft.bmp", "ground/grass_bottomRight.bmp" ]
+	}
+}
