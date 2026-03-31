@@ -66,17 +66,24 @@ private:
 	re::RE re;
 	re::RSP rr;
 	tx::Animation anim{ 3 };
+	Platformer engine;
 
 private:
 	bool init() {
 		tx::glfwSetKeyCallback<Application, &Application::onKeyEvent>(framework.getWindow(), this);
 		tx::glBasicSettings();
 		//stbi_set_flip_vertically_on_load(true);
-		//glfwSwapInterval(0); // turn off vsync
+		glfwSwapInterval(0); // turn off vsync
 
 		re.init();
 		rr = re.createSectionProxy(re::readShaderSource("vertex.vert"), re::readShaderSource("fragment.frag"));
 
+		engine = Platformer([&](Platformer::Initer& initer) {
+			initer.addHorizontal(-1.0f, 1.0f, -0.5f, true);
+			initer.addHorizontal(-1.0f, 1.0f, 0.5f, false);
+			initer.addVertical(-0.5f, 0.5f, -0.8f, true);
+			initer.addVertical(-0.5f, 0.5f, 0.8f, false);
+		});
 
 		// int width, height, channels;
 		// std::vector<tx::u8*> data;
@@ -104,69 +111,41 @@ private:
 		return 1;
 	}
 
-	tx::u32 frameCounter = 0;
-	tx::u32 imageCount = 15;
-
-
-	const float scaleIncreaseMult = 1.067f;
-	const float scaleDecreaseMult = 0.9f;
-	float scale = 0.1f, currentMult = scaleIncreaseMult;
-	float degree = 0.0f, rotationSpeed = tx::ONE_DEGREE * -5.0f, degreeMax = 2 * tx::PI;
-	tx::Rainbow colorEngine = tx::Rainbow(36);
+	tx::Rect player{ { 0.0f, 0.35f }, 0.1f, 0.1f };
 
 	tx::u64 tickCounter = 0;
 	void update() {
-		// anim frame
-		if (!(tickCounter % 3)) {
-			frameCounter++;
-			if (frameCounter >= 11) {
-				frameCounter = 0;
-			}
-		}
-		// scale
-		scale *= currentMult;
-		if (scale >= 2.0f) {
-			currentMult = scaleDecreaseMult;
-		} else if (scale <= 0.5f) {
-			currentMult = scaleIncreaseMult;
-		}
-		// rotation
-		degree += rotationSpeed;
-		if (degree >= degreeMax) degree -= degreeMax;
+		tx::vec2 movement{ 0.0f, 0.0f };
+		float speed = 0.1f;
 
-		tickCounter++;
+		if (glfwGetKey(framework.getWindow(), GLFW_KEY_DOWN)) {
+			movement.moveY(-speed);
+		}
+		if (glfwGetKey(framework.getWindow(), GLFW_KEY_UP)) {
+			movement.moveY(speed);
+		}
+		if (glfwGetKey(framework.getWindow(), GLFW_KEY_LEFT)) {
+			movement.moveX(-speed);
+		}
+		if (glfwGetKey(framework.getWindow(), GLFW_KEY_RIGHT)) {
+			movement.moveX(speed);
+		}
+
+		if (movement.x() != 0.0f || movement.y() != 0.0f) {
+			engine.moveConstrainted(player, movement);
+		}
 	}
 	void render() {
-		rr.drawSprite(tx::Origin, 0, 0.0f, tx::vec2{ 1.0f, 1.0f }, 0, colorEngine.getNextColor().compress());
+		rr.drawSprite(player.center(), 0, 0.0f, player.dimension(), 0, tx::MikuColor.compress());
+		rr.drawLine({ -1.0f, -0.5f }, { 1.0f, -0.5f }); // Floor
+		rr.drawLine({ -1.0f, 0.5f }, { 1.0f, 0.5f }); // Ceiling
+		rr.drawLine({ -0.8f, -0.5f }, { -0.8f, 0.5f }); // Left Wall
+		rr.drawLine({ 0.8f, -0.5f }, { 0.8f, 0.5f }); // Right Wall
 		re.draw();
 	}
 };
 
 int main() {
-
-	std::vector<int> ids = { 3, 1, 4, 2 };
-	std::vector<std::string> val1 = { "Three", "One", "Four", "Two" };
-	std::vector<double> val2 = { 3.3, 1.1, 4.4, 2.2 };
-
-	// Sort by ID ascending
-	tx::multi_sort(ids.begin(), ids.end(), std::less<>(), val1.begin(), val2.begin());
-
-	for (size_t i = 0; i < ids.size(); ++i) {
-		std::cout << ids[i] << ": " << val1[i] << ", " << val2[i] << "\n";
-	}
-	// Output:
-	// 1: One, 1.1
-	// 2: Two, 2.2
-	// 3: Three, 3.3
-	// 4: Four, 4.4
-
-
-
-
-
-
-
-	return 0;
 	std::cout << "Initializing Application...\n";
 	Application app;
 	if (!app.valid()) {
