@@ -143,6 +143,30 @@ private:
 };
 
 int main() {
+
+	std::vector<int> ids = { 3, 1, 4, 2 };
+	std::vector<std::string> val1 = { "Three", "One", "Four", "Two" };
+	std::vector<double> val2 = { 3.3, 1.1, 4.4, 2.2 };
+
+	// Sort by ID ascending
+	tx::multi_sort(ids.begin(), ids.end(), std::less<>(), val1.begin(), val2.begin());
+
+	for (size_t i = 0; i < ids.size(); ++i) {
+		std::cout << ids[i] << ": " << val1[i] << ", " << val2[i] << "\n";
+	}
+	// Output:
+	// 1: One, 1.1
+	// 2: Two, 2.2
+	// 3: Three, 3.3
+	// 4: Four, 4.4
+
+
+
+
+
+
+
+	return 0;
 	std::cout << "Initializing Application...\n";
 	Application app;
 	if (!app.valid()) {

@@ -5,6 +5,7 @@
 #include "tx/map.h"
 #include "tx/json.h"
 #include "tx/resource.h"
+#include "tx/utility.h"
 #include <bits/stdc++.h>
 
 using std::cin;
@@ -73,7 +74,7 @@ inline void glBasicSettings() {
 }
 
 
-enum class CoordDirection : u32 {
+enum class Direction : u32 {
 	Right = 0,
 	Left = 1,
 	Top = 2,
@@ -84,9 +85,16 @@ enum class CoordDirection : u32 {
 	BottomRight = 7,
 	None = 255
 };
-constexpr tx::Coord dirToCoord(CoordDirection dir) {
-	return tx::_8wayIncrement[static_cast<int>(dir)];
+constexpr tx::Coord dirToCoord(Direction dir) {
+	return _8wayIncrement[enumval(dir)];
 }
+
+constexpr tx::vec2 dirToVec2(Direction dir) {
+	return directionVec[enumval(dir)];
+}
+
+
+
 
 // BMP Loader *****************************************************************************************************************
 class BMPFile {

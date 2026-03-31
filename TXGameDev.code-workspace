@@ -7,6 +7,10 @@
 		{
 			"name": "TXGame",
 			"path": "."
+		},
+		{
+			"name": "TXLib",
+			"path": "../TXLib"
 		}
 	],
 	"settings": {
