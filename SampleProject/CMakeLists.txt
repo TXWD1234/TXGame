@@ -47,6 +47,7 @@ set_target_properties(TXProject PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/bin"
 )
 tx_link_dir_to_bin(TXProject "${CMAKE_SOURCE_DIR}/assets")
+tx_link_dir_to_bin(TXProject "${CMAKE_SOURCE_DIR}/config")
 
 install(TARGETS TXProject
     RUNTIME DESTINATION bin

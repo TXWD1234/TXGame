@@ -66,7 +66,7 @@ private:
 	re::RE re;
 	re::RSP rr;
 	tx::Animation anim{ 3 };
-	Platformer engine;
+	gm::Platformer engine;
 
 private:
 	bool init() {
@@ -78,7 +78,7 @@ private:
 		re.init();
 		rr = re.createSectionProxy(re::readShaderSource("vertex.vert"), re::readShaderSource("fragment.frag"));
 
-		engine = Platformer([&](Platformer::Initer& initer) {
+		engine = gm::Platformer([&](gm::Platformer::Initer& initer) {
 			initer.addBox(tx::BottomLeft, 2.0f, 2.0f, false);
 
 			// Parkour Map!

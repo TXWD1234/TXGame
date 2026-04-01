@@ -7,6 +7,7 @@
 #include "tx/resource.h"
 #include "tx/utility.h"
 #include <bits/stdc++.h>
+#include "txgame.hpp"
 
 using std::cin;
 using std::cout;
