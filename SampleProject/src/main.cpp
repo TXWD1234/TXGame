@@ -115,32 +115,34 @@ private:
 
 	tx::u64 tickCounter = 0;
 	void update() {
-		tx::vec2 movement{ 0.0f, 0.0f };
-		float speed = 0.1f;
+		// tx::vec2 movement{ 0.0f, 0.0f };
+		// float speed = 0.1f;
 
-		if (glfwGetKey(framework.getWindow(), GLFW_KEY_DOWN)) {
-			movement.moveY(-speed);
-		}
-		if (glfwGetKey(framework.getWindow(), GLFW_KEY_UP)) {
-			movement.moveY(speed);
-		}
-		if (glfwGetKey(framework.getWindow(), GLFW_KEY_LEFT)) {
-			movement.moveX(-speed);
-		}
-		if (glfwGetKey(framework.getWindow(), GLFW_KEY_RIGHT)) {
-			movement.moveX(speed);
-		}
+		// if (glfwGetKey(framework.getWindow(), GLFW_KEY_DOWN)) {
+		// 	movement.moveY(-speed);
+		// }
+		// if (glfwGetKey(framework.getWindow(), GLFW_KEY_UP)) {
+		// 	movement.moveY(speed);
+		// }
+		// if (glfwGetKey(framework.getWindow(), GLFW_KEY_LEFT)) {
+		// 	movement.moveX(-speed);
+		// }
+		// if (glfwGetKey(framework.getWindow(), GLFW_KEY_RIGHT)) {
+		// 	movement.moveX(speed);
+		// }
 
-		if (movement.x() != 0.0f || movement.y() != 0.0f) {
-			engine.moveConstrainted(player, movement);
-		}
+		// if (movement.x() != 0.0f || movement.y() != 0.0f) {
+		// 	engine.objectMoveConstrainted(player, movement);
+		// }
+
+		if (!engine.objectOnFloor(player))
+			player.moveY(-0.01f);
 	}
 	void render() {
 		rr.drawSprite(player.center(), 0, 0.0f, player.dimension(), 0, tx::MikuColor.compress());
-		rr.drawLine({ -1.0f, -0.5f }, { 1.0f, -0.5f }); // Floor
-		rr.drawLine({ -1.0f, 0.5f }, { 1.0f, 0.5f }); // Ceiling
-		rr.drawLine({ -0.8f, -0.5f }, { -0.8f, 0.5f }); // Left Wall
-		rr.drawLine({ 0.8f, -0.5f }, { 0.8f, 0.5f }); // Right Wall
+		engine.drawDebugLines([&](tx::vec2 start, tx::vec2 end) {
+			rr.drawLine(start, end);
+		});
 		re.draw();
 	}
 };

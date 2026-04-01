@@ -63,7 +63,7 @@ public:
 		init_impl(std::move(initer));
 	}
 
-	void moveConstrainted(tx::Rect& object, tx::vec2 movement) {
+	void objectMoveConstrainted(tx::Rect& object, tx::vec2 movement) {
 		tx::Rect target = object.offset(movement);
 		float left = std::min(object.left(), target.left()),
 		      right = std::max(object.right(), target.right()),
@@ -79,10 +79,29 @@ public:
 		object.setPos(resultX, resultY);
 	}
 
+	bool objectOnFloor(tx::Rect& object) {
+		float epsilon = tx::epsilon * 100;
+		float bottom = object.bottom();
+		bool result = 0;
+		foreachRange(horizontal, object.left(), object.right(), [&](tx::u32 i) {
+			if (!result && horizontal.facePositive[i] &&
+			    std::abs(horizontal.offset[i] - bottom) <= epsilon)
+				result = 1;
+		});
+		return result;
+	}
 
 
 
-
+	template <std::invocable<tx::vec2, tx::vec2> Func>
+	void drawDebugLines(Func&& f) {
+		for (tx::u32 i = 0; i < vertical.size(); i++) {
+			f({ vertical.offset[i], vertical.begin[i] }, { vertical.offset[i], vertical.end[i] });
+		}
+		for (tx::u32 i = 0; i < horizontal.size(); i++) {
+			f({ horizontal.begin[i], horizontal.offset[i] }, { horizontal.end[i], horizontal.offset[i] });
+		}
+	}
 
 
 private:
@@ -99,23 +118,31 @@ private:
 		tx::multi_sort(c.end.begin(), c.end.end(), c.begin.begin(), c.facePositive.begin(), c.offset.begin());
 	}
 
+	// @param Func `std::invocable<tx::u32>`
+	template <std::invocable<tx::u32> Func>
+	void foreachRange(const Constraints_impl& cons, float negativeEdge, float positiveEdge, Func&& f) {
+		tx::u32 indexBegin = findBeginIndex_impl(cons, negativeEdge);
+		if (indexBegin == cons.size()) return;
+		for (tx::u32 i = indexBegin; i < cons.size(); i++) {
+			if (cons.begin[i] > positiveEdge) break;
+			f(i);
+		}
+	}
+
 	// parameter begin should be the negative end of the axis (eg. left / bottom)
 	tx::u32 findBeginIndex_impl(const Constraints_impl& cons, float begin) const {
 		return std::lower_bound(cons.end.begin(), cons.end.end(), begin) - cons.end.begin();
 	}
 	void solveConstraint(const Constraints_impl& cons, float& result, float objSize,
 	                     bool facePositive, float negativeEdge, float positiveEdge, float oppositeNegativeEdge, float oppositePositiveEdge) {
-		tx::u32 indexBegin = findBeginIndex_impl(cons, negativeEdge);
-		if (indexBegin == cons.size()) return;
-		for (tx::u32 i = indexBegin; i < cons.size(); i++) {
-			if (cons.begin[i] > positiveEdge) break;
+		foreachRange(cons, negativeEdge, positiveEdge, [&](tx::u32 i) {
 			if (cons.facePositive[i] == facePositive ||
 			    cons.offset[i] >= oppositePositiveEdge ||
-			    cons.offset[i] <= oppositeNegativeEdge) continue;
+			    cons.offset[i] <= oppositeNegativeEdge) return;
 			if (facePositive)
 				result = std::min(result, cons.offset[i] - objSize);
 			else
 				result = std::max(result, cons.offset[i]);
-		}
+		});
 	}
 };
