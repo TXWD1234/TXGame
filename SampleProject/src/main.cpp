@@ -79,10 +79,36 @@ private:
 		rr = re.createSectionProxy(re::readShaderSource("vertex.vert"), re::readShaderSource("fragment.frag"));
 
 		engine = Platformer([&](Platformer::Initer& initer) {
-			initer.addHorizontal(-1.0f, 1.0f, -0.5f, true);
-			initer.addHorizontal(-1.0f, 1.0f, 0.5f, false);
-			initer.addVertical(-0.5f, 0.5f, -0.8f, true);
-			initer.addVertical(-0.5f, 0.5f, 0.8f, false);
+			initer.addHorizontal(-1.0f, 1.0f, -1.0f, true);
+			initer.addHorizontal(-1.0f, 1.0f, 1.0f, false);
+			initer.addVertical(-1.0f, 1.0f, -1.0f, true);
+			initer.addVertical(-1.0f, 1.0f, 1.0f, false);
+
+			// Parkour Map!
+			// 1. Starting platform
+			initer.addHorizontal(-1.0f, -0.6f, -0.8f, true);
+
+			// 2. First jump
+			initer.addHorizontal(-0.4f, 0.0f, -0.65f, true);
+			initer.addHorizontal(-0.4f, 0.0f, -0.65f, false);
+
+			// 3. Second jump
+			initer.addHorizontal(0.3f, 0.7f, -0.5f, true);
+
+			// 4. Wrap around a wall
+			//initer.addVertical(-0.5f, 0.0f, 0.7f, false); // Block right
+			initer.addHorizontal(0.8f, 1.0f, -0.3f, true); // Safe spot
+
+			// 5. Jump back left
+			initer.addHorizontal(0.2f, 0.5f, -0.1f, true);
+			initer.addHorizontal(-0.4f, 0.0f, 0.1f, true);
+
+			// 6. Tiny precision jump
+			initer.addHorizontal(-0.8f, -0.7f, 0.3f, true);
+
+			// 7. Goal platform with a back wall
+			initer.addHorizontal(-0.2f, 0.8f, 0.5f, true);
+			initer.addVertical(0.5f, 0.8f, 0.8f, false);
 		});
 
 		// int width, height, channels;
@@ -111,32 +137,42 @@ private:
 		return 1;
 	}
 
-	tx::Rect player{ { 0.0f, 0.35f }, 0.1f, 0.1f };
+	tx::Rect player{ { -0.9f, -0.7f }, 0.1f, 0.1f };
+	tx::vec2 playerVelocity;
+	float playerSpeed = 0.02f, playerJumpSpeed = 0.05f;
+	const float Gravity = 0.005f;
 
 	tx::u64 tickCounter = 0;
 	void update() {
-		// tx::vec2 movement{ 0.0f, 0.0f };
-		// float speed = 0.1f;
+		// change of velocity
+		if (!engine.objectOnFloor(player)) {
+			playerVelocity.y -= Gravity;
+		} else {
+			playerVelocity.y = 0.0f;
+			if (glfwGetKey(framework.getWindow(), GLFW_KEY_UP)) {
+				// jump
+				playerVelocity.y = playerJumpSpeed;
+			}
+		}
 
-		// if (glfwGetKey(framework.getWindow(), GLFW_KEY_DOWN)) {
-		// 	movement.moveY(-speed);
-		// }
-		// if (glfwGetKey(framework.getWindow(), GLFW_KEY_UP)) {
-		// 	movement.moveY(speed);
-		// }
-		// if (glfwGetKey(framework.getWindow(), GLFW_KEY_LEFT)) {
-		// 	movement.moveX(-speed);
-		// }
-		// if (glfwGetKey(framework.getWindow(), GLFW_KEY_RIGHT)) {
-		// 	movement.moveX(speed);
-		// }
+		// current movement
 
-		// if (movement.x() != 0.0f || movement.y() != 0.0f) {
-		// 	engine.objectMoveConstrainted(player, movement);
-		// }
+		tx::vec2 movement = playerVelocity;
 
-		if (!engine.objectOnFloor(player))
-			player.moveY(-0.01f);
+		if (glfwGetKey(framework.getWindow(), GLFW_KEY_LEFT)) {
+			movement.x = -playerSpeed;
+		}
+		if (glfwGetKey(framework.getWindow(), GLFW_KEY_RIGHT)) {
+			movement.x = playerSpeed;
+		}
+
+		engine.objectMoveConstrainted(player, movement);
+
+		// "The floor is lava" - reset if fallen off the map
+		if (player.bottom() < -1.1f) {
+			player.setPos(-0.9f, -0.7f); // Reset to start
+			playerVelocity.y = 0.0f;
+		}
 	}
 	void render() {
 		rr.drawSprite(player.center(), 0, 0.0f, player.dimension(), 0, tx::MikuColor.compress());

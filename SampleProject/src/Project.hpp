@@ -64,18 +64,19 @@ public:
 	}
 
 	void objectMoveConstrainted(tx::Rect& object, tx::vec2 movement) {
+		if (tx::negligible(movement)) return;
 		tx::Rect target = object.offset(movement);
 		float left = std::min(object.left(), target.left()),
 		      right = std::max(object.right(), target.right()),
 		      top = std::max(object.top(), target.top()),
 		      bottom = std::min(object.bottom(), target.bottom());
-		float resultX = target.bottomLeft().x(), resultY = target.bottomLeft().y();
-		if (std::fabs(movement.y()) > tx::epsilon)
+		float resultX = target.bottomLeft().x, resultY = target.bottomLeft().y;
+		if (!tx::negligible(movement.y))
 			solveConstraint(horizontal, resultY, target.width(),
-			                movement.y() > 0, left, right, bottom, top);
-		if (std::fabs(movement.x()) > tx::epsilon)
+			                movement.y > 0, left, right, bottom, top);
+		if (!tx::negligible(movement.x))
 			solveConstraint(vertical, resultX, target.height(),
-			                movement.x() > 0, bottom, top, left, right);
+			                movement.x > 0, bottom, top, left, right);
 		object.setPos(resultX, resultY);
 	}
 
@@ -124,7 +125,7 @@ private:
 		tx::u32 indexBegin = findBeginIndex_impl(cons, negativeEdge);
 		if (indexBegin == cons.size()) return;
 		for (tx::u32 i = indexBegin; i < cons.size(); i++) {
-			if (cons.begin[i] > positiveEdge) break;
+			if (cons.begin[i] > positiveEdge) continue;
 			f(i);
 		}
 	}
