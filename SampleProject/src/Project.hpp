@@ -49,6 +49,23 @@ public:
 			vertical.facePositive.push_back(faceRight);
 		}
 
+		// utility
+
+		void addBox(tx::vec2 bottomLeft, float width, float height, bool faceOutside = true) {
+			addHorizontal(bottomLeft.x, bottomLeft.x + width, bottomLeft.y, !faceOutside);
+			addHorizontal(bottomLeft.x, bottomLeft.x + width, bottomLeft.y + height, faceOutside);
+			addVertical(bottomLeft.y, bottomLeft.y + height, bottomLeft.x, !faceOutside);
+			addVertical(bottomLeft.y, bottomLeft.y + height, bottomLeft.x + width, faceOutside);
+		}
+		void addBarrierH(float xBegin, float xEnd, float y) {
+			addHorizontal(xBegin, xEnd, y, true);
+			addHorizontal(xBegin, xEnd, y, false);
+		}
+		void addBarrierV(float yBegin, float yEnd, float x) {
+			addHorizontal(yBegin, yEnd, x, true);
+			addHorizontal(yBegin, yEnd, x, false);
+		}
+
 	private:
 		Constraints_impl vertical;
 		Constraints_impl horizontal;

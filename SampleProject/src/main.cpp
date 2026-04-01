@@ -79,10 +79,7 @@ private:
 		rr = re.createSectionProxy(re::readShaderSource("vertex.vert"), re::readShaderSource("fragment.frag"));
 
 		engine = Platformer([&](Platformer::Initer& initer) {
-			initer.addHorizontal(-1.0f, 1.0f, -1.0f, true);
-			initer.addHorizontal(-1.0f, 1.0f, 1.0f, false);
-			initer.addVertical(-1.0f, 1.0f, -1.0f, true);
-			initer.addVertical(-1.0f, 1.0f, 1.0f, false);
+			initer.addBox(tx::BottomLeft, 2.0f, 2.0f, false);
 
 			// Parkour Map!
 			// 1. Starting platform
@@ -175,7 +172,7 @@ private:
 		}
 	}
 	void render() {
-		rr.drawSprite(player.center(), 0, 0.0f, player.dimension(), 0, tx::MikuColor.compress());
+		rr.drawSprite(player.center(), 0, 0.0f, player.dimension(), tx::MikuColor.compress());
 		engine.drawDebugLines([&](tx::vec2 start, tx::vec2 end) {
 			rr.drawLine(start, end);
 		});
