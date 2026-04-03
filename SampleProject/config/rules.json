@@ -1,6 +1,6 @@
 {
 	"Player": {
 		"txgame.type": "Unit",
-		"Art": "testing/purposes/Player"
+		"art": "testing/purposes/Player"
 	}
 }
