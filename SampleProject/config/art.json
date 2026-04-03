@@ -2,6 +2,7 @@
 	"testing":{
 		"purposes":{
 			"Player": {
+				"txgame.type": "Asset",
 				"down": "/home/TX_Jerry/Downloads/Yafan Sprites/slip_1_copy.jpg",
 				"up": "/home/TX_Jerry/Downloads/Yafan Sprites/slip_4_copy.jpg"
 			}
