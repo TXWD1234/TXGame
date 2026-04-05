@@ -330,7 +330,39 @@ private:
 		return back;
 	}
 };
+template <class T>
+class HandleContainer {
+public:
+	tx::u32 addHandle(const T& value) {
+		tx::u32 handle = m_hs.addHandle();
+		resizeToFit(handle);
+		m_handleValues[handle] = value;
+		return handle;
+	}
+	tx::u32 addHandle(T&& value) {
+		tx::u32 handle = m_hs.addHandle();
+		resizeToFit(handle);
+		m_handleValues[handle] = std::move(value);
+		return handle;
+	}
 
+	void deleteHandle(tx::u32 handle) {
+		if (handle < m_handleValues.size()) m_handleValues[handle] = T{};
+		m_hs.deleteHandle(handle);
+	}
+
+	T& operator[](tx::u32 handle) { return m_handleValues[handle]; }
+	const T& operator[](tx::u32 handle) const { return m_handleValues[handle]; }
+
+private:
+	HandleSystem m_hs;
+	std::vector<T> m_handleValues;
+
+	void resizeToFit(tx::u32 index) {
+		if (index >= m_handleValues.size())
+			m_handleValues.resize(index + 1);
+	}
+};
 
 
 
