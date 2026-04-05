@@ -29,6 +29,16 @@ std::string readShaderSource(const std::string& filename) {
 	return readWholeFileText(shaderPath / filename);
 }
 
+TextureId REAddTexture(const std::fs::path& filePath, RenderEngine& re) {
+	Image image{ filePath };
+	if (!image.valid()) return { InvalidU32, InvalidU32 };
+	return re.addTexture(image.dimension(), image.getSpan());
+}
+TextureId REAddTexture(const std::fs::path& filePath, tx::u32 dimensionId, RenderEngine& re) {
+	Image image{ filePath };
+	if (!image.valid() || re.getTextureDimension(dimensionId) != image.dimension()) return { InvalidU32, InvalidU32 };
+	return re.addTexture(dimensionId, image.getSpan());
+}
 
 
 
@@ -42,7 +52,18 @@ Coord getWindowSize(GLFWwindow* window) {
 	glfwGetWindowSize(window, &x, &y);
 	return Coord{ x, y };
 }
-
+vec2 getCursorPos(GLFWwindow* window) {
+	static double sideLen = [](GLFWwindow* window) { 
+		Coord dim = getWindowSize(window);
+		return static_cast<double>(std::min(dim.x, dim.y)); }(window);
+	double x, y;
+	glfwGetCursorPos(window, &x, &y);
+	x = clamp(x, 0.0, sideLen);
+	y = clamp(y, 0.0, sideLen);
+	x = (x - sideLen) / (sideLen);
+	y = -(y - sideLen) / (sideLen);
+	return vec2(x, y);
+}
 
 
 

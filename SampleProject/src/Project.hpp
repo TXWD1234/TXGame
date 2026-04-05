@@ -1,5 +1,7 @@
 #include "utility_dump.hpp"
 
+namespace txgame {
+
 struct ConfigObj {
 	std::string_view regName;
 	const tx::JsonObject* content;
@@ -252,7 +254,7 @@ public:
 			if (obj.handler) {
 				m_config->entries.back().art = obj.handler->getObjectIndex(obj.regName);
 			} else {
-				// TODO: Optional warning logging here about missing reference
+				// TODO: Optional warning logging here about missing reference <----------------------------------------------------------------------
 			}
 		}
 	}
@@ -299,5 +301,255 @@ struct ConfigClass {
 		content.addHandler(handler_art);
 		content.addHandler(handler_unit);
 		ConfigManager::configure(content);
+	}
+	ConfigClass() = default;
+};
+using ConfigIniter = ConfigClass::ConfigIniter;
+
+
+
+class HandleSystem {
+public:
+private:
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// animman ***************************************************************************
+
+struct AnimationId {
+	tx::u32 index;
+};
+using AnimId = AnimationId;
+
+class AnimationManager {
+	// Terminology:
+	// play = playing animation
+private:
+	using id = tx::RenderEngine::TextureId;
+	using u32 = tx::u32;
+	using u16 = tx::u16;
+	using u8 = tx::u8;
+
+	struct AnimMeta_impl {
+		u32 offset;
+		u16 len;
+		u8 frameInterval, repeat;
+	};
+	struct AnimCounter_impl {
+		u16 counter;
+		u16 counterMax;
+	};
+	struct AnimPlayMeta_impl {
+		std::vector<u32> id;
+		std::vector<AnimCounter_impl> frameCounter;
+		std::vector<AnimCounter_impl> intervalCounter;
+	};
+
+public:
+	AnimationManager() {
+	}
+
+
+	// @param frameRate means the rate of update, aka the interval of frame update, pass 0 means update every frame.
+	template <std::invocable<std::span<id>> Func>
+	AnimationId addAnimation(u8 frameRate, u16 length, bool repeat, Func&& f) {
+		m_animations.push_back({ static_cast<u32>(m_frames.size()), length, frameRate, static_cast<u8>(repeat) });
+		u32 oldSize = static_cast<u32>(m_frames.size());
+		m_frames.resize(m_frames.size() + length);
+		f(std::span<id>{ m_frames.begin() + oldSize, m_frames.end() });
+		return { static_cast<u32>(m_animations.size() - 1) };
+	}
+
+	void reserveFrames(u32 count) { m_frames.reserve(count); }
+
+
+	void update() {
+		// Update non-repeating animations
+		for (u32 i = 0; i < m_nonRepeatPlays.intervalCounter.size();) {
+			auto& intervalCounter = m_nonRepeatPlays.intervalCounter[i];
+			intervalCounter.counter++;
+			if (intervalCounter.counter >= intervalCounter.counterMax) { // update frame counter
+				intervalCounter.counter = 0; // reset interval counter
+				auto& frameCounter = m_nonRepeatPlays.frameCounter[i];
+				frameCounter.counter++;
+				if (frameCounter.counter >= frameCounter.counterMax) { // end of one run of the anim
+					removeAnimPlay_impl(m_nonRepeatPlays, i);
+					continue; // Skip incrementing so we process the swapped-in element
+				}
+			}
+			i++;
+		}
+
+		// Update repeating animations
+		for (u32 i = 0; i < m_repeatPlays.intervalCounter.size(); i++) {
+			auto& intervalCounter = m_repeatPlays.intervalCounter[i];
+			intervalCounter.counter++;
+			if (intervalCounter.counter >= intervalCounter.counterMax) { // update frame counter
+				intervalCounter.counter = 0; // reset interval counter
+				auto& frameCounter = m_repeatPlays.frameCounter[i];
+				frameCounter.counter++;
+				if (frameCounter.counter >= frameCounter.counterMax) { // end of one run of the anim
+					frameCounter.counter = 0; // reset frame counter
+				}
+			}
+		}
+	}
+
+	// @brief add a playing animation into the playing animation buffer (aka add a playing anim instance)
+	// @return the id of the animPlay. the highest bit of the id is `isRepeat`
+	u32 play(AnimationId animId) {
+		if (m_animations[animId.index].repeat) {
+			insertAnimPlay_impl(m_repeatPlays, animId.index);
+
+			return static_cast<u32>(m_repeatPlays.id.size() - 1) | 0x80000000;
+		} else {
+			insertAnimPlay_impl(m_nonRepeatPlays, animId.index);
+			return static_cast<u32>(m_nonRepeatPlays.id.size() - 1);
+		}
+	}
+	void stop(u32 index) {
+		if (index & 0x80000000) {
+			removeAnimPlay_impl(m_repeatPlays, index & ~0x80000000);
+		} else {
+			removeAnimPlay_impl(m_nonRepeatPlays, index);
+		}
+	}
+	void stopAll(AnimationId id) {
+		for (u32 i = 0; i < m_nonRepeatPlays.id.size();) {
+			if (m_nonRepeatPlays.id[i] == id.index)
+				removeAnimPlay_impl(m_nonRepeatPlays, i);
+			else
+				i++;
+		}
+		for (u32 i = 0; i < m_repeatPlays.id.size();) {
+			if (m_repeatPlays.id[i] == id.index)
+				removeAnimPlay_impl(m_repeatPlays, i);
+			else
+				i++;
+		}
+	}
+
+	// Get the current TextureId for a actively playing animation instance
+	id getFrame(u32 playIndex) const {
+		const AnimPlayMeta_impl& buffer = (playIndex & 0x80000000) ? m_repeatPlays : m_nonRepeatPlays;
+		playIndex &= ~0x80000000;
+
+		u32 animId = buffer.id[playIndex];
+		u32 frameOffset = m_animations[animId].offset;
+		u16 currentFrame = buffer.frameCounter[playIndex].counter;
+		return m_frames[frameOffset + currentFrame];
+	}
+
+
+
+
+
+
+
+private:
+	std::vector<id> m_frames;
+	std::vector<AnimMeta_impl> m_animations;
+	AnimPlayMeta_impl m_repeatPlays;
+	AnimPlayMeta_impl m_nonRepeatPlays;
+	std::vector<u32> m_repeatIndexMap; // maps the returned handle of a play with the physical index of the the play
+
+
+	void insertAnimPlay_impl(AnimPlayMeta_impl& buffer, u32 id) {
+		buffer.id.push_back(id);
+		buffer.frameCounter.push_back({ 0, m_animations[id].len });
+		buffer.intervalCounter.push_back({ 0, m_animations[id].frameInterval });
+	}
+
+	template <class T>
+	void removeElement_impl(std::vector<T>& arr, u32 index) {
+		arr[index] = std::move(arr.back());
+		arr.pop_back();
+	}
+	void removeAnimPlay_impl(AnimPlayMeta_impl& buffer, u32 index) {
+		removeElement_impl(buffer.frameCounter, index);
+		removeElement_impl(buffer.id, index);
+		removeElement_impl(buffer.intervalCounter, index);
+	}
+};
+
+
+
+class AssetManager {
+public:
+private:
+	re::RenderEngine* re;
+};
+
+} // namespace txgame
+
+
+class Game {
+public:
+	Game() = default;
+	void init(tx::u32 sideLen) {
+		nodes.reinit(sideLen);
+		re.init();
+		rr = re.createSectionProxy(re::readShaderSource("vertex.vert"), re::readShaderSource("fragment.frag"));
+	}
+
+	void update() {
+	}
+	void render() {
+		drawLines();
+		re.draw();
+	}
+
+
+private:
+	struct Node {
+		tx::u32 health = 0;
+		tx::u32 level = 0;
+		tx::u32 occupyed = 0;
+		tx::u32 owner = 0;
+		std::array<tx::u32, 3> adjacent;
+	};
+
+	enum class GeneralState {
+		Normal,
+		Select
+	};
+
+
+private:
+	// game
+	tx::GridSystem<Node> nodes;
+	float GridSize;
+
+	// render
+	re::RenderEngine re;
+	re::RSP rr;
+
+
+	void drawLines() {
+		float increment = 2.0f / nodes.getWidth();
+		float current = -1.0f;
+		for (int i = 0; i < nodes.getWidth(); i++) {
+			current += increment;
+			rr.drawLineHorizontal(current);
+			rr.drawLineVertical(current);
+		}
+	}
+	void drawGrid(Node& obj, tx::vec2 pos) {
+	}
+	void drawGrids() {
 	}
 };

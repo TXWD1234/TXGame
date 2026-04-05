@@ -5,5 +5,6 @@
 
 #pragma once
 #include "impl/platformer.hpp"
+#include "impl/animation.hpp"
 
 namespace gm = txgame;
