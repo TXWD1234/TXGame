@@ -307,10 +307,28 @@ struct ConfigClass {
 using ConfigIniter = ConfigClass::ConfigIniter;
 
 
-
+// be aware of the double-deletion problem, and the dangling reference of the deleted handles
 class HandleSystem {
 public:
+	tx::u32 addHandle() {
+		if (!m_availableHandleBuffer.empty()) return pop_back();
+		return m_handleMax++;
+	}
+	void deleteHandle(tx::u32 handle) {
+		if (handle < m_handleMax) m_availableHandleBuffer.push_back(handle);
+	}
+
+	tx::u32 count() { return m_handleMax - static_cast<tx::u32>(m_availableHandleBuffer.size()); }
+
 private:
+	std::vector<tx::u32> m_availableHandleBuffer;
+	tx::u32 m_handleMax = 0; // aka the next handle
+
+	tx::u32 pop_back() {
+		tx::u32 back = m_availableHandleBuffer.back();
+		m_availableHandleBuffer.pop_back();
+		return back;
+	}
 };
 
 
