@@ -18,7 +18,8 @@ class ConfigContent;
 class ConfigHandlerBase {
 public:
 	virtual ~ConfigHandlerBase() = default;
-	virtual void handleConfig(const tx::JsonObject&, std::string_view, const ConfigDir&, const ConfigContent&) = 0;
+	virtual void registerObject(std::string_view) = 0;
+	virtual void handleObject(const tx::JsonObject&, std::string_view, const ConfigDir&, const ConfigContent&) = 0;
 	virtual std::string_view getRegName() = 0;
 	virtual tx::u32 getObjectIndex(std::string_view) = 0;
 
@@ -35,6 +36,14 @@ protected:
 		if (it != config.end())
 			var = static_cast<T>(f(it->v()));
 	}
+	template <class T, std::invocable<const tx::JsonValue&, T&> Func>
+	void setVal(T& var, std::string_view name, const tx::JsonObject& config, Func&& f) {
+		auto it = config.find(name);
+		if (it != config.end())
+			f(it->v());
+	}
+	// resolve a path
+	void setValReference(tx::u32& var, std::string_view name, const tx::JsonObject& config, const ConfigDir& rootDir, const ConfigContent& content);
 };
 
 // Transparent lookup utilities for unordered_map
@@ -101,7 +110,10 @@ public:
 		ConfigDir root;
 		constructStructure_impl(root, content.root, content);
 		foreachObj_impl(root, [&](const ConfigObj& obj) {
-			content.handlers[obj.handlerIndex]->handleConfig(*obj.content, obj.regName, root, content);
+			content.handlers[obj.handlerIndex]->registerObject(obj.regName);
+		});
+		foreachObj_impl(root, [&](const ConfigObj& obj) {
+			content.handlers[obj.handlerIndex]->handleObject(*obj.content, obj.regName, root, content);
 		});
 	}
 	template <std::invocable<ConfigContent&> Func>
@@ -168,6 +180,14 @@ private:
 	}
 };
 
+void ConfigHandlerBase::setValReference(tx::u32& var, std::string_view name, const tx::JsonObject& config, const ConfigDir& rootDir, const ConfigContent& content) {
+	auto it = config.find(name);
+	if (it != config.end() && it->v().is<std::string>()) {
+		ConfigObjectHandle objHandle = ConfigManager::findObject(it->v().get<std::string>(), content, rootDir);
+		if (objHandle.handler) var = objHandle.handler->getObjectIndex(objHandle.regName);
+	}
+}
+
 
 class ConfigHandler_Art;
 class Config_Art {
@@ -197,11 +217,14 @@ public:
 
 	// ConfigManager (init time) oriented virtual functions
 
-	void handleConfig(const tx::JsonObject& config, std::string_view regName, const ConfigDir& rootDir, const ConfigContent& content) override {
-		// hard coded, user specific code
+	void registerObject(std::string_view regName) override {
 		regNameIndexMap.insert({ regName, static_cast<tx::u32>(m_config->entries.size()) });
 		m_config->entries.emplace_back();
-		auto& obj = m_config->entries.back();
+	}
+
+	void handleObject(const tx::JsonObject& config, std::string_view regName, const ConfigDir& rootDir, const ConfigContent& content) override {
+		// hard coded, user specific code
+		auto& obj = m_config->entries[getObjectIndex(regName)];
 		setVal(obj.down, "down", config);
 		setVal(obj.up, "up", config);
 	}
@@ -235,7 +258,7 @@ public:
 	// user specific entries
 	struct Object {
 		// all members here will be user specific
-		tx::u32 art;
+		tx::u32 art = tx::InvalidU32;
 	};
 
 public:
@@ -253,11 +276,14 @@ public:
 
 	// ConfigManager (init time) oriented virtual functions
 
-	void handleConfig(const tx::JsonObject& config, std::string_view regName, const ConfigDir& rootDir, const ConfigContent& content) override {
-		// hard coded, user specific code
+	void registerObject(std::string_view regName) override {
 		regNameIndexMap.insert({ regName, static_cast<tx::u32>(m_config->entries.size()) });
 		m_config->entries.emplace_back();
-		auto& obj = m_config->entries.back();
+	}
+
+	void handleObject(const tx::JsonObject& config, std::string_view regName, const ConfigDir& rootDir, const ConfigContent& content) override {
+		// hard coded, user specific code
+		auto& obj = m_config->entries[getObjectIndex(regName)];
 		setVal(obj.art, "art", config, [&](const tx::JsonValue& jsonVal) -> tx::u32 {
 			if (!jsonVal.is<std::string>()) return tx::InvalidU32;
 			ConfigObjectHandle objHandle = ConfigManager::findObject(jsonVal.get<std::string>(), content, rootDir);
@@ -290,9 +316,10 @@ public:
 	using Handler_t = ConfigHandler_Animation;
 
 	struct Object {
-		tx::u32 length = 0;
-		tx::u8 frameRate = 0;
+		tx::u32 length = tx::InvalidU32;
+		tx::u8 frameRate = tx::InvalidU8;
 		bool repeat = false;
+		std::vector<std::string> frames;
 	};
 
 public:
@@ -307,14 +334,26 @@ class ConfigHandler_Animation : public ConfigHandlerBase {
 public:
 	ConfigHandler_Animation(Config_Animation& config) : m_config(&config) {}
 
-	void handleConfig(const tx::JsonObject& config, std::string_view regName, const ConfigDir& rootDir, const ConfigContent& content) override {
+	void registerObject(std::string_view regName) override {
 		regNameIndexMap.insert({ regName, static_cast<tx::u32>(m_config->entries.size()) });
 		m_config->entries.emplace_back();
-		auto& obj = m_config->entries.back();
+	}
+
+	void handleObject(const tx::JsonObject& config, std::string_view regName, const ConfigDir& rootDir, const ConfigContent& content) override {
+		auto& obj = m_config->entries[getObjectIndex(regName)];
 
 		setVal(obj.length, "length", config);
 		setVal(obj.frameRate, "frameRate", config);
 		setVal(obj.repeat, "repeat", config);
+
+		auto framesIt = config.find("frames");
+		if (framesIt != config.end() && framesIt->v().is<tx::JsonArray>()) {
+			for (const auto& val : framesIt->v().get<tx::JsonArray>()) {
+				if (val.is<std::string>()) {
+					obj.frames.push_back(val.get<std::string>());
+				}
+			}
+		}
 	}
 	std::string_view getRegName() override { return "Animation"; }
 	tx::u32 getObjectIndex(std::string_view regName) override {
@@ -328,17 +367,52 @@ private:
 	std::unordered_map<std::string_view, tx::u32> regNameIndexMap;
 };
 
+class ConfigHandler_General;
+class Config_General {
+	friend class ConfigHandler_General;
+
+public:
+	using Handler_t = ConfigHandler_General;
+
+	// attributes
+
+	tx::u32 animation = tx::InvalidU32;
+};
+
+class ConfigHandler_General : public ConfigHandlerBase {
+public:
+	ConfigHandler_General(Config_General& config) : m_config(&config) {}
+
+	void registerObject(std::string_view regName) override {}
+
+	void handleObject(const tx::JsonObject& config, std::string_view regName, const ConfigDir& rootDir, const ConfigContent& content) override {
+		setValReference(m_config->animation, "animation", config, rootDir, content);
+	}
+	std::string_view getRegName() override { return "General"; }
+	tx::u32 getObjectIndex(std::string_view regName) override { return 0; }
+
+private:
+	Config_General* m_config;
+	std::unordered_map<std::string_view, tx::u32> regNameIndexMap;
+};
+
 struct ConfigClass {
 	Config_Art art;
 	Config_Unit unit;
 	Config_Animation anim;
+	Config_General general;
 
 	struct ConfigIniter {
 		friend class ConfigClass;
 
-		template <class... Args>
-		void addSource(Args&&... args) {
-			content->addSource(args...);
+		void addSource(const tx::JsonObject& source) {
+			content->addSource(source);
+		}
+		void addSource(tx::JsonObject&& source) {
+			content->addSource(std::move(source));
+		}
+		void addSourceFile(const std::filesystem::path& path) {
+			content->addSource(tx::parseJson(tx::readWholeFileText(path)));
 		}
 
 	private:
@@ -350,12 +424,14 @@ struct ConfigClass {
 		Config_Art::Handler_t handler_art{ art };
 		Config_Unit::Handler_t handler_unit{ unit };
 		Config_Animation::Handler_t handler_anim{ anim };
+		Config_General::Handler_t handler_general{ general };
 		ConfigContent content;
 		ConfigIniter initer{ content };
 		f(initer);
 		content.addHandler(handler_art);
 		content.addHandler(handler_unit);
 		content.addHandler(handler_anim);
+		content.addHandler(handler_general);
 		ConfigManager::configure(content);
 	}
 	ConfigClass() = default;
@@ -363,7 +439,9 @@ struct ConfigClass {
 using ConfigIniter = ConfigClass::ConfigIniter;
 
 
-// be aware of the double-deletion problem, and the dangling reference of the deleted handles
+
+
+// be aware of the dangling reference of the deleted handles
 class HandleSystem {
 public:
 	tx::u32 addHandle() {
@@ -630,11 +708,10 @@ private:
 	}
 };
 
-inline AnimationId loadAnimConfig(AnimationManager& animMan, const Config_Animation::Object& animObj) {
-	return animMan.addAnimation(animObj.frameRate, animObj.length, animObj.repeat, [](auto frames) {
+inline AnimationId AMLoadAnimConfig(AnimationManager& am, const Config_Animation::Object& config, re::RenderEngine& re) {
+	return am.addAnimation(config.frameRate, config.length, config.repeat, [&](auto frames) {
 		for (size_t i = 0; i < frames.size(); ++i) {
-			// Feed dummy TextureIds for testing purposes
-			frames[i] = { static_cast<tx::u32>(i), static_cast<tx::u32>(i) };
+			frames[i] = re::REAddTexture(re, config.frames[i]);
 		}
 	});
 }
@@ -656,12 +733,21 @@ public:
 		nodes.reinit(sideLen);
 		re.init();
 		rr = re.createSectionProxy(re::readShaderSource("vertex.vert"), re::readShaderSource("fragment.frag"));
+
+		config = gm::ConfigClass([&](gm::ConfigIniter& initer) {
+			initer.addSourceFile(tx::getExeDir() / "config/art.json");
+			initer.addSourceFile(tx::getExeDir() / "config/rules.json");
+		});
+		gm::AnimId animId = gm::AMLoadAnimConfig(am, config.anim[config.general.animation], re);
+		anim = am.play(animId);
 	}
 
 	void update() {
+		am.update();
 	}
 	void render() {
-		drawLines();
+		//drawLines();
+		rr.drawSprite(tx::Origin, am.getFrame(anim), { 1.0f, 1.0f }, 0xFFFFFFFF);
 		re.draw();
 	}
 
@@ -690,6 +776,10 @@ private:
 	re::RenderEngine re;
 	re::RSP rr;
 
+	// anim man test
+	gm::AnimationManager am;
+	gm::ConfigClass config;
+	tx::u32 anim;
 
 	void drawLines() {
 		float increment = 2.0f / nodes.getWidth();

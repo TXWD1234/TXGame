@@ -29,12 +29,12 @@ std::string readShaderSource(const std::string& filename) {
 	return readWholeFileText(shaderPath / filename);
 }
 
-TextureId REAddTexture(const fs::path& filePath, RenderEngine& re) {
+TextureId REAddTexture(RenderEngine& re, const fs::path& filePath) {
 	Image image{ filePath };
 	if (!image.valid()) return { InvalidU32, InvalidU32 };
 	return re.addTexture(image.dimension(), image.getSpan());
 }
-TextureId REAddTexture(const fs::path& filePath, tx::u32 dimensionId, RenderEngine& re) {
+TextureId REAddTexture(RenderEngine& re, const fs::path& filePath, tx::u32 dimensionId) {
 	Image image{ filePath };
 	if (!image.valid() || re.getTextureDimension(dimensionId) != image.dimension()) return { InvalidU32, InvalidU32 };
 	return re.addTexture(dimensionId, image.getSpan());

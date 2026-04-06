@@ -1,11 +1,21 @@
 {
-	"testing":{
-		"purposes":{
-			"Player": {
-				"txgame.type": "Art",
-				"down": "/home/TX_Jerry/Downloads/Yafan Sprites/slip_1_copy.jpg",
-				"up": "/home/TX_Jerry/Downloads/Yafan Sprites/slip_4_copy.jpg"
-			}
-		}
+	"chen_chen_dance": {
+		"txgame.type": "Animation",
+		"length": 11,
+		"frameRate": 3,
+		"repeat": true,
+		"frames": [
+			"/home/TX_Jerry/Desktop/mpv-shot0001.jpg",
+			"/home/TX_Jerry/Desktop/mpv-shot0002.jpg",
+			"/home/TX_Jerry/Desktop/mpv-shot0003.jpg",
+			"/home/TX_Jerry/Desktop/mpv-shot0005.jpg",
+			"/home/TX_Jerry/Desktop/mpv-shot0006.jpg",
+			"/home/TX_Jerry/Desktop/mpv-shot0007.jpg",
+			"/home/TX_Jerry/Desktop/mpv-shot0008.jpg",
+			"/home/TX_Jerry/Desktop/mpv-shot0009.jpg",
+			"/home/TX_Jerry/Desktop/mpv-shot0010.jpg",
+			"/home/TX_Jerry/Desktop/mpv-shot0011.jpg",
+			"/home/TX_Jerry/Desktop/mpv-shot0012.jpg"
+		]
 	}
 }

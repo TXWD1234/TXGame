@@ -77,6 +77,7 @@ private:
 
 	Game game;
 
+
 	tx::u64 tickCounter = 0;
 	void update() {
 		game.update();

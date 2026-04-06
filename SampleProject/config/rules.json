@@ -1,6 +1,6 @@
 {
-	"Player": {
-		"txgame.type": "Unit",
-		"art": "testing/purposes/Player"
+	"General": {
+		"txgame.type": "General",
+		"animation": "chen_chen_dance"
 	}
 }
