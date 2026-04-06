@@ -21,6 +21,20 @@ public:
 	virtual void handleConfig(const tx::JsonObject&, std::string_view, const ConfigDir&, const ConfigContent&) = 0;
 	virtual std::string_view getRegName() = 0;
 	virtual tx::u32 getObjectIndex(std::string_view) = 0;
+
+protected:
+	template <class T>
+	void setVal(T& var, std::string_view name, const tx::JsonObject& config) {
+		auto it = config.find(name);
+		if (it != config.end() && it->v().is<tx::json_type_t<T>>())
+			var = static_cast<T>(it->v().get<tx::json_type_t<T>>());
+	}
+	template <class T, tx::invocable_r<T, const tx::JsonValue&> Func>
+	void setVal(T& var, std::string_view name, const tx::JsonObject& config, Func&& f) {
+		auto it = config.find(name);
+		if (it != config.end())
+			var = static_cast<T>(f(it->v()));
+	}
 };
 
 // Transparent lookup utilities for unordered_map
@@ -187,14 +201,9 @@ public:
 		// hard coded, user specific code
 		regNameIndexMap.insert({ regName, static_cast<tx::u32>(m_config->entries.size()) });
 		m_config->entries.emplace_back();
-		auto downIt = config.find("down");
-		if (downIt != config.end() && downIt->v().is<std::string>()) {
-			m_config->entries.back().down = downIt->v().get<std::string>();
-		}
-		auto upIt = config.find("up");
-		if (upIt != config.end() && upIt->v().is<std::string>()) {
-			m_config->entries.back().up = upIt->v().get<std::string>();
-		}
+		auto& obj = m_config->entries.back();
+		setVal(obj.down, "down", config);
+		setVal(obj.up, "up", config);
 	}
 	std::string_view getRegName() override {
 		return "Art";
@@ -248,15 +257,13 @@ public:
 		// hard coded, user specific code
 		regNameIndexMap.insert({ regName, static_cast<tx::u32>(m_config->entries.size()) });
 		m_config->entries.emplace_back();
-		auto artIt = config.find("art");
-		if (artIt != config.end() && artIt->v().is<std::string>()) {
-			ConfigObjectHandle obj = ConfigManager::findObject(artIt->v().get<std::string>(), content, rootDir);
-			if (obj.handler) {
-				m_config->entries.back().art = obj.handler->getObjectIndex(obj.regName);
-			} else {
-				// TODO: Optional warning logging here about missing reference <----------------------------------------------------------------------
-			}
-		}
+		auto& obj = m_config->entries.back();
+		setVal(obj.art, "art", config, [&](const tx::JsonValue& jsonVal) -> tx::u32 {
+			if (!jsonVal.is<std::string>()) return tx::InvalidU32;
+			ConfigObjectHandle objHandle = ConfigManager::findObject(jsonVal.get<std::string>(), content, rootDir);
+			if (objHandle.handler) return objHandle.handler->getObjectIndex(objHandle.regName);
+			return tx::InvalidU32;
+		});
 	}
 	std::string_view getRegName() override {
 		return "Unit";
@@ -303,13 +310,11 @@ public:
 	void handleConfig(const tx::JsonObject& config, std::string_view regName, const ConfigDir& rootDir, const ConfigContent& content) override {
 		regNameIndexMap.insert({ regName, static_cast<tx::u32>(m_config->entries.size()) });
 		m_config->entries.emplace_back();
+		auto& obj = m_config->entries.back();
 
-		auto lenIt = config.find("length");
-		if (lenIt != config.end() && lenIt->v().is<int>()) m_config->entries.back().length = static_cast<tx::u32>(lenIt->v().get<int>());
-		auto frIt = config.find("frameRate");
-		if (frIt != config.end() && frIt->v().is<int>()) m_config->entries.back().frameRate = static_cast<tx::u8>(frIt->v().get<int>());
-		auto repIt = config.find("repeat");
-		if (repIt != config.end() && repIt->v().is<bool>()) m_config->entries.back().repeat = repIt->v().get<bool>();
+		setVal(obj.length, "length", config);
+		setVal(obj.frameRate, "frameRate", config);
+		setVal(obj.repeat, "repeat", config);
 	}
 	std::string_view getRegName() override { return "Animation"; }
 	tx::u32 getObjectIndex(std::string_view regName) override {
@@ -321,11 +326,6 @@ public:
 private:
 	Config_Animation* m_config;
 	std::unordered_map<std::string_view, tx::u32> regNameIndexMap;
-
-	Config_Animation::Object& back() { return m_config->entries.back(); }
-	template <class T>
-	void setVal(T& var, std::string_view name) {
-	}
 };
 
 struct ConfigClass {
@@ -367,17 +367,28 @@ using ConfigIniter = ConfigClass::ConfigIniter;
 class HandleSystem {
 public:
 	tx::u32 addHandle() {
-		if (!m_availableHandleBuffer.empty()) return pop_back();
+		if (!m_availableHandleBuffer.empty()) {
+			tx::u32 handle = pop_back();
+			m_active[handle] = 1;
+			return handle;
+		}
+		m_active.push_back(1);
 		return m_handleMax++;
 	}
 	void deleteHandle(tx::u32 handle) {
-		if (handle < m_handleMax) m_availableHandleBuffer.push_back(handle);
+		if (handle < m_handleMax && m_active[handle]) {
+			m_active[handle] = 0;
+			m_availableHandleBuffer.push_back(handle);
+		}
 	}
+
+	bool valid(tx::u32 handle) const { return handle < m_handleMax && m_active[handle]; }
 
 	tx::u32 count() { return m_handleMax - static_cast<tx::u32>(m_availableHandleBuffer.size()); }
 
 private:
 	std::vector<tx::u32> m_availableHandleBuffer;
+	std::vector<tx::u8> m_active;
 	tx::u32 m_handleMax = 0; // aka the next handle
 
 	tx::u32 pop_back() {
@@ -406,6 +417,8 @@ public:
 		if (handle < m_handleValues.size()) m_handleValues[handle] = T{};
 		m_hs.deleteHandle(handle);
 	}
+
+	bool valid(tx::u32 handle) const { return m_hs.valid(handle); }
 
 	T& operator[](tx::u32 handle) { return m_handleValues[handle]; }
 	const T& operator[](tx::u32 handle) const { return m_handleValues[handle]; }
@@ -473,13 +486,14 @@ private:
 	};
 	struct AnimPlayIndex_impl {
 		inline constexpr static u32 highestBit = 0x80000000;
-		u32 m_index;
+		u32 m_index = tx::InvalidU32; // Default to invalid!
 		AnimPlayIndex_impl() = default;
 		AnimPlayIndex_impl(u32 index, bool repeat) {
 			m_index = index | (repeat ? highestBit : 0);
 		}
-		bool repeat() { return m_index & highestBit; }
-		u32 index() { return m_index & ~highestBit; }
+		bool repeat() const { return m_index & highestBit; }
+		u32 index() const { return m_index & ~highestBit; }
+		bool valid() const { return m_index != tx::InvalidU32; }
 		void operator=(u32 index) {
 			m_index = index | (m_index & highestBit);
 		}
@@ -525,7 +539,10 @@ public:
 	}
 	// @param playHandle the handle users have. generated by HandleSystem, returned by play()
 	void stop(u32 playHandle) {
+		if (!m_animPlayIndexMap.valid(playHandle)) return;
 		AnimPlayIndex_impl playIndex = m_animPlayIndexMap[playHandle];
+		if (!playIndex.valid()) return;
+
 		removeAnimPlay_impl(
 		    playIndex.repeat() ? m_repeatPlays : m_nonRepeatPlays,
 		    playIndex.index());
@@ -534,7 +551,10 @@ public:
 	// Get the current TextureId for a actively playing animation instance
 	// @param playHandle the handle users have. generated by HandleSystem, returned by play()
 	id getFrame(u32 playHandle) const {
+		if (!m_animPlayIndexMap.valid(playHandle)) return { tx::InvalidU32, tx::InvalidU32 };
 		AnimPlayIndex_impl playIndex = m_animPlayIndexMap[playHandle];
+		if (!playIndex.valid()) return { tx::InvalidU32, tx::InvalidU32 };
+
 		const AnimPlayMeta_impl* buffer;
 		if (playIndex.repeat()) {
 			buffer = &m_repeatPlays;

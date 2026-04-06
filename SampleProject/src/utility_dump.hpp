@@ -23,18 +23,18 @@ namespace tx {
 
 namespace RenderEngine {
 
-const std::fs::path shaderPath = tx::getExeDir() / "assets/shaders";
+const fs::path shaderPath = tx::getExeDir() / "assets/shaders";
 
 std::string readShaderSource(const std::string& filename) {
 	return readWholeFileText(shaderPath / filename);
 }
 
-TextureId REAddTexture(const std::fs::path& filePath, RenderEngine& re) {
+TextureId REAddTexture(const fs::path& filePath, RenderEngine& re) {
 	Image image{ filePath };
 	if (!image.valid()) return { InvalidU32, InvalidU32 };
 	return re.addTexture(image.dimension(), image.getSpan());
 }
-TextureId REAddTexture(const std::fs::path& filePath, tx::u32 dimensionId, RenderEngine& re) {
+TextureId REAddTexture(const fs::path& filePath, tx::u32 dimensionId, RenderEngine& re) {
 	Image image{ filePath };
 	if (!image.valid() || re.getTextureDimension(dimensionId) != image.dimension()) return { InvalidU32, InvalidU32 };
 	return re.addTexture(dimensionId, image.getSpan());
@@ -264,7 +264,7 @@ private:
 };
 
 using RGBMap = tx::GridSystem<tx::RGB>;
-RGBMap readBMP(const std::fs::path& fp) {
+RGBMap readBMP(const fs::path& fp) {
 	BMPFile file{ fp };
 
 	RGBMap map{ file.width, file.height };
