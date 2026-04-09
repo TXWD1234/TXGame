@@ -728,8 +728,7 @@ private:
 
 class Game {
 public:
-	Game() = default;
-	void init(tx::u32 sideLen) {
+	Game(tx::u32 sideLen) {
 		nodes.reinit(sideLen);
 		re.init();
 		rr = re.createSectionProxy(re::readShaderSource("vertex.vert"), re::readShaderSource("fragment.frag"));
@@ -747,7 +746,7 @@ public:
 	}
 	void render() {
 		//drawLines();
-		rr.drawSprite(tx::Origin, am.getFrame(anim), { 1.0f, 1.0f }, 0xFFFFFFFF);
+		rr.drawSprite(tx::Origin, am.getFrame(anim));
 		re.draw();
 	}
 

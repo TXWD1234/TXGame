@@ -70,20 +70,20 @@ private:
 		stbi_set_flip_vertically_on_load(true);
 		glfwSwapInterval(0); // turn off vsync
 
-		game.init(10);
+		game = std::make_unique<Game>(10);
 
 		return 1;
 	}
 
-	Game game;
+	std::unique_ptr<Game> game;
 
 
 	tx::u64 tickCounter = 0;
 	void update() {
-		game.update();
+		game->update();
 	}
 	void render() {
-		game.render();
+		game->render();
 	}
 };
 
