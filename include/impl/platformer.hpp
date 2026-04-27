@@ -131,7 +131,7 @@ private:
 		sortConstaints_impl(horizontal);
 	}
 	void sortConstaints_impl(Constraints_impl& c) {
-		tx::multi_sort(c.end.begin(), c.end.end(), c.begin.begin(), c.facePositive.begin(), c.offset.begin());
+		tx::sort_multi(c.end.begin(), c.end.end(), c.begin.begin(), c.facePositive.begin(), c.offset.begin());
 	}
 
 	// @param Func `std::invocable<tx::u32>`

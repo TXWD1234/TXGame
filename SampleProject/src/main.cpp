@@ -74,7 +74,6 @@ private:
 
 		return 1;
 	}
-
 	std::unique_ptr<Game> game;
 
 
@@ -88,6 +87,15 @@ private:
 };
 
 int main() {
+	z
+	        cout
+	    << sizeof(std::span<std::vector<int>>);
+	return 0;
+	for (char i = 33; i < CHAR_MAX; i++) {
+		cout << i;
+	}
+
+	return 0;
 	std::cout << "Initializing Application...\n";
 	Application app;
 	if (!app.valid()) {
