@@ -5,20 +5,20 @@
 			"name": "config_debug",
 			"displayName": "config_debug",
 			"generator": "Ninja",
-			"binaryDir": "${sourceDir}/build",
+			"binaryDir": "build",
 			"cacheVariables": {
 				"CMAKE_BUILD_TYPE": "Debug",
-				"CMAKE_INSTALL_PREFIX": "${sourceDir}/dist"
+				"CMAKE_INSTALL_PREFIX": "dist"
 			}
 		},
 		{
 			"name": "config_release",
 			"displayName": "config_release",
 			"generator": "Ninja",
-			"binaryDir": "${sourceDir}/build",
+			"binaryDir": "build",
 			"cacheVariables": {
 				"CMAKE_BUILD_TYPE": "Release",
-				"CMAKE_INSTALL_PREFIX": "${sourceDir}/dist"
+				"CMAKE_INSTALL_PREFIX": "dist"
 			}
 		}
 	],

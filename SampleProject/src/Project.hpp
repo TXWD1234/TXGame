@@ -442,39 +442,46 @@ using ConfigIniter = ConfigClass::ConfigIniter;
 
 
 // be aware of the dangling reference of the deleted handles
-class HandleSystem {
+template <std::integral T>
+class HandleSystemBase {
 public:
-	tx::u32 addHandle() {
+	using value_type = T;
+
+	T addHandle() {
 		if (!m_availableHandleBuffer.empty()) {
-			tx::u32 handle = pop_back();
+			T handle = pop_back();
 			m_active[handle] = 1;
 			return handle;
 		}
 		m_active.push_back(1);
 		return m_handleMax++;
 	}
-	void deleteHandle(tx::u32 handle) {
+	void deleteHandle(T handle) {
 		if (handle < m_handleMax && m_active[handle]) {
 			m_active[handle] = 0;
 			m_availableHandleBuffer.push_back(handle);
 		}
 	}
 
-	bool valid(tx::u32 handle) const { return handle < m_handleMax && m_active[handle]; }
+	bool valid(T handle) const { return handle < m_handleMax && m_active[handle]; }
 
 	tx::u32 count() { return m_handleMax - static_cast<tx::u32>(m_availableHandleBuffer.size()); }
 
-private:
-	std::vector<tx::u32> m_availableHandleBuffer;
-	std::vector<tx::u8> m_active;
-	tx::u32 m_handleMax = 0; // aka the next handle
+	void reserve(tx::u32 count) { m_active.reserve(count); }
+	void reserveDeletion(tx::u32 count) { m_availableHandleBuffer.reserve(count); }
 
-	tx::u32 pop_back() {
-		tx::u32 back = m_availableHandleBuffer.back();
+private:
+	std::vector<T> m_availableHandleBuffer;
+	std::vector<tx::u8> m_active;
+	T m_handleMax = 0; // aka the next handle
+
+	T pop_back() {
+		T back = m_availableHandleBuffer.back();
 		m_availableHandleBuffer.pop_back();
 		return back;
 	}
 };
+using HandleSystem = HandleSystemBase<tx::u32>;
 template <class T>
 class HandleContainer {
 public:
