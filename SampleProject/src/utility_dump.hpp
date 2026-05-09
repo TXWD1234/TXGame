@@ -8,7 +8,7 @@
 #include "tx/utility.h"
 #include "tx/data.h"
 #include <bits/stdc++.h>
-#include "txgame.hpp"
+#include "tx/game.h"
 
 using std::cin;
 using std::cout;

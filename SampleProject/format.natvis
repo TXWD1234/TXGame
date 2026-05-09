@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Visualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <!-- This forces standard integers to display as binary -->
+  <Type Name="int">
+    <DisplayString>{*this,b}</DisplayString>
+  </Type>
+  <Type Name="unsigned int">
+    <DisplayString>{*this,b}</DisplayString>
+  </Type>
+  <Type Name="unsigned char">
+    <DisplayString>{*this,b}</DisplayString>
+  </Type>
+</Visualizer>
